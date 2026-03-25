@@ -1,10 +1,10 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatGroq } from "@langchain/groq";
 import { config } from "dotenv";
 config();
-console.log(process.env.GEMINI_API_KEY);
-export const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-1.5-pro",
+export const llm = new ChatGroq({
+  model: "llama-3.1-8b-instant",
   temperature: 0,
+  maxTokens: undefined,
   maxRetries: 2,
-  apiKey: process.env.GEMINI_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });

@@ -5,20 +5,33 @@ export function extractPlanJSON(raw: string) {
     // Remove code fences
     cleaned = cleaned.replace(/```json|```/gi, "").trim();
 
-    // Try direct parse first (fast path)
+    // Try direct parse
     try {
       return JSON.parse(cleaned);
     } catch {}
 
-    // Extract first valid JSON object using regex (safer)
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("No JSON found");
+    // Find first valid JSON block using bracket matching
+    let start = cleaned.indexOf("{");
+    if (start === -1) throw new Error("No JSON start found");
 
-    const jsonStr = match[0];
+    let stack = 0;
+    let end = -1;
 
-    const parsed = JSON.parse(jsonStr);
+    for (let i = start; i < cleaned.length; i++) {
+      if (cleaned[i] === "{") stack++;
+      if (cleaned[i] === "}") stack--;
 
-    return parsed;
+      if (stack === 0) {
+        end = i;
+        break;
+      }
+    }
+
+    if (end === -1) throw new Error("No valid JSON end found");
+
+    const jsonStr = cleaned.slice(start, end + 1);
+
+    return JSON.parse(jsonStr);
   } catch (err) {
     console.error("❌ JSON extraction failed:", err);
     return null;

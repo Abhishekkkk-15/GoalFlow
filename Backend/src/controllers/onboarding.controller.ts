@@ -29,11 +29,15 @@ export const generateNewPlan = async (
   try {
     const { qAnda }: { qAnda: IQAndA[] } = req.body;
     if (!qAnda) res.status(404).json({ message: "Question not provided" });
-
+    const categories =
+      qAnda.find((q) => q.question === "Where do you want to improve?")
+        ?.answer || [];
     const formattedUserData = JSON.stringify(qAnda, null, 2);
-
+    console.log(qAnda);
     const input = await prompt.format({
       userData: formattedUserData,
+      categories,
+      CURRENT_DATE: new Date().toISOString(),
     });
     const llmWithTool = llm.bindTools([getPresentTimeAndDate]);
     const response = await llm.invoke(input);

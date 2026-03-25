@@ -127,7 +127,9 @@ export const Dashboard: React.FC = () => {
         return true;
 
       case "weekly":
-        return start.getDay() === current.getDay();
+        const taskDay = start.getDay(); // e.g. Monday
+        const todayDay = current.getDay(); // e.g. today
+        return taskDay === todayDay;
 
       case "monthly":
         return start.getDate() === current.getDate();

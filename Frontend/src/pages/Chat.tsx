@@ -1,42 +1,78 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { mockChatMessages } from '../data/mockData';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ChatMessage } from '../types';
 import { Send, Bot, User } from 'lucide-react';
+import { PageHeader } from '../components/layout/PageHeader';
 
 export const Chat: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>(mockChatMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
+  const suggestedPrompts = [
+    "I’m stuck—help me pick one small next step",
+    "What should I focus on today?",
+    "I missed a task—how do I get back on track?",
+    "Give me a quick motivation plan for the next 10 minutes",
+  ];
+
+  const aiReplyProvider = async (userText: string): Promise<string> => {
+    const lower = userText.toLowerCase();
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    if (lower.includes('stuck') || lower.includes('overwhelm')) {
+      return "Let’s make this easy. Pick one tiny action you can finish in 5 minutes. Then we’ll schedule the next micro-step right after it. What’s the smallest action you can do today?";
+    }
+
+    if (lower.includes('today') || lower.includes('focus')) {
+      return "Today’s focus: complete the smallest high-impact task first. After that, do a 2-minute “momentum check” (how you feel + what to adjust). Want to tell me which task you’re currently avoiding?";
+    }
+
+    if (lower.includes('missed') || lower.includes('back on track') || lower.includes('miss')) {
+      return "Missing a task isn’t failure—it’s data. Let’s reset gently: (1) identify what got in the way, (2) shrink the next task by 50%, and (3) add a simple trigger (time/place) so it’s easier to start.";
+    }
+
+    return "Thanks for sharing. Here’s a simple plan: (1) choose one goal you care about, (2) define the next action in one sentence, and (3) do it for 10 minutes. What’s your next action right now?";
+  };
+
+  const handleSendText = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: newMessage,
+      content: trimmed,
       sender: 'user',
       timestamp: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
-    setLoading(true);
+    setIsThinking(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
+    try {
+      const aiText = await aiReplyProvider(trimmed);
+      const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: "Thanks for sharing! I understand you're working on your goals. Let me help you stay on track. What specific challenge would you like to discuss today?",
+        content: aiText,
         sender: 'ai',
         timestamp: new Date().toISOString()
       };
-      setMessages(prev => [...prev, aiResponse]);
-      setLoading(false);
-    }, 1500);
+      setMessages(prev => [...prev, aiMessage]);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    setNewMessage('');
+    await handleSendText(newMessage);
   };
 
   const formatTime = (timestamp: string) => {
@@ -46,19 +82,46 @@ export const Chat: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isThinking]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
       <div className="max-w-4xl mx-auto h-full flex flex-col">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Chat</h1>
-          <p className="text-gray-600">Get instant advice and motivation from your personal AI coach.</p>
-        </div>
+        <PageHeader
+          title="AI Chat"
+          description="Get instant advice and motivation from your personal AI coach."
+        />
 
         {/* Chat Container */}
         <Card className="flex-1 flex flex-col overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.length === 0 && !isThinking && (
+              <EmptyState
+                title="Start your coaching"
+                description="Ask your AI coach for guidance, motivation, and a simple next-step plan."
+                icon={<Bot className="w-6 h-6" />}
+                action={
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {suggestedPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        disabled={isThinking}
+                        onClick={() => handleSendText(prompt)}
+                        className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-800 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        aria-label={`Send suggested prompt: ${prompt}`}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                }
+              />
+            )}
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -92,7 +155,7 @@ export const Chat: React.FC = () => {
               </div>
             ))}
             
-            {loading && (
+            {isThinking && (
               <div className="flex justify-start">
                 <div className="flex mr-3">
                   <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
@@ -108,6 +171,8 @@ export const Chat: React.FC = () => {
                 </div>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Message Input */}
@@ -117,10 +182,15 @@ export const Chat: React.FC = () => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
-                disabled={loading}
+                disabled={isThinking}
+                aria-label="Chat message"
                 className="flex-1"
               />
-              <Button type="submit" disabled={!newMessage.trim() || loading}>
+              <Button
+                type="submit"
+                disabled={!newMessage.trim() || isThinking}
+                aria-label="Send chat message"
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </form>

@@ -1,16 +1,25 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-const initialState = {
+export interface TitleState {
+  title: string;
+  createdAt: string;
+}
+
+const initialState: TitleState = {
   title: "",
   createdAt: "",
 };
 
 const titleSlice = createSlice({
-  name: "task",
+  name: "title",
   initialState,
   reducers: {
-    setTitle: (state, action: PayloadAction<string>) => {
-      return action.payload;
+    setTitle: (
+      state,
+      action: PayloadAction<{ title: string; createdAt: string }>
+    ) => {
+      state.title = action.payload.title;
+      state.createdAt = action.payload.createdAt;
     },
   },
 });

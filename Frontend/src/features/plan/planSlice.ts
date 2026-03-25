@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { DailyTask, Plan } from "../../types";
+import { Plan } from "../../types";
 
-const initialState: Plan[] | null = [];
+const initialState: Plan[] = [];
 
 const taskSlice = createSlice({
   name: "plan",
@@ -10,8 +10,8 @@ const taskSlice = createSlice({
     setPlans: (state, action: PayloadAction<Plan[]>) => {
       return action.payload;
     },
-    clearPlans: (state) => {
-      state = null;
+    clearPlans: () => {
+      return [];
     },
   },
 });

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { User, Mail, Calendar, AlertTriangle } from 'lucide-react';
+import React, { useState } from "react";
+import { useUser } from "@clerk/clerk-react";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { User, Mail, Calendar, AlertTriangle } from "lucide-react";
 
 export const Profile: React.FC = () => {
   const { user } = useUser();
@@ -12,7 +12,7 @@ export const Profile: React.FC = () => {
   const handleDeleteData = async () => {
     setDeleting(true);
     // Simulate API call to delete user data
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     setDeleting(false);
     setShowDeleteConfirm(false);
     // In a real app, this would clear user data and potentially redirect
@@ -26,7 +26,9 @@ export const Profile: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
-          <p className="text-gray-600">Manage your account settings and preferences.</p>
+          <p className="text-gray-600">
+            Manage your account settings and preferences.
+          </p>
         </div>
 
         {/* Profile Information */}
@@ -43,14 +45,18 @@ export const Profile: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">
                 {user.firstName} {user.lastName}
               </h2>
-              <p className="text-gray-600">{user.emailAddresses[0]?.emailAddress}</p>
+              <p className="text-gray-600">
+                {user.emailAddresses[0]?.emailAddress}
+              </p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center text-gray-600">
               <User className="h-5 w-5 mr-3" />
-              <span>Name: {user.firstName} {user.lastName}</span>
+              <span>
+                Name: {user.firstName} {user.lastName}
+              </span>
             </div>
             <div className="flex items-center text-gray-600">
               <Mail className="h-5 w-5 mr-3" />
@@ -58,30 +64,36 @@ export const Profile: React.FC = () => {
             </div>
             <div className="flex items-center text-gray-600">
               <Calendar className="h-5 w-5 mr-3" />
-              <span>Joined: {new Date(user.createdAt!).toLocaleDateString()}</span>
+              <span>
+                Joined: {new Date(user.createdAt!).toLocaleDateString()}
+              </span>
             </div>
           </div>
         </Card>
 
         {/* Account Actions */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Management</h3>
-          
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Account Management
+          </h3>
+
           <div className="space-y-4">
             <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
               <div className="flex items-start">
                 <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3" />
                 <div>
-                  <h4 className="font-medium text-yellow-800">Reset Progress Data</h4>
+                  <h4 className="font-medium text-yellow-800">
+                    Reset Progress Data
+                  </h4>
                   <p className="text-sm text-yellow-700 mb-3">
-                    This will permanently delete all your goals, tasks, and progress data. This action cannot be undone.
+                    This will permanently delete all your goals, tasks, and
+                    progress data. This action cannot be undone.
                   </p>
                   {!showDeleteConfirm ? (
                     <Button
                       variant="outline"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                    >
+                      className="border-yellow-300 text-yellow-700 hover:bg-yellow-100">
                       Reset Data
                     </Button>
                   ) : (
@@ -93,15 +105,13 @@ export const Profile: React.FC = () => {
                         <Button
                           onClick={handleDeleteData}
                           loading={deleting}
-                          className="bg-red-600 hover:bg-red-700 text-white"
-                        >
+                          className="bg-red-600 hover:bg-red-700 text-white">
                           Yes, Delete All Data
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => setShowDeleteConfirm(false)}
-                          disabled={deleting}
-                        >
+                          disabled={deleting}>
                           Cancel
                         </Button>
                       </div>
@@ -115,7 +125,9 @@ export const Profile: React.FC = () => {
 
         {/* Usage Statistics */}
         <Card className="p-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage Statistics</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Usage Statistics
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="text-2xl font-bold text-gray-900">7</div>

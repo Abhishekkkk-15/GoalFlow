@@ -26,6 +26,8 @@ export interface DailyTask {
   category: string;
   completed: boolean;
   dueDate: string;
+  // Backend may provide priority for tasks; keep it optional for now.
+  priority?: "low" | "medium" | "high";
 }
 
 export interface Plan {
@@ -47,7 +49,7 @@ export interface PlanTask {
   title: string;
   description: string;
   timeframe: string;
-  priority: 'Low' | 'Medium' | 'High';
+  priority: "low" | "medium" | "high";
 }
 
 export interface ChatMessage {

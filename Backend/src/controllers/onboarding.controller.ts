@@ -36,7 +36,7 @@ export const generateNewPlan = async (
       userData: formattedUserData,
     });
     const llmWithTool = llm.bindTools([getPresentTimeAndDate]);
-    const response = await llmWithTool.invoke(input);
+    const response = await llm.invoke(input);
     console.log("AI response : ", response);
     const parsedData = extractPlanJSON(response.text);
     console.log("Parsed Res :", parsedData);

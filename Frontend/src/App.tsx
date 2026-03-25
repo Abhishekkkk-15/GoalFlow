@@ -35,12 +35,9 @@ const OnboardingCheck: React.FC<{ children: React.ReactNode }> = ({
   const hasCompletedOnboarding =
     localStorage.getItem("onboarding-completed") === "true";
 
-  React.useEffect(() => {
-    // Simulate onboarding completion for demo
-    if (!hasCompletedOnboarding) {
-      localStorage.setItem("onboarding-completed", "true");
-    }
-  }, [hasCompletedOnboarding]);
+  if (!hasCompletedOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   return <>{children}</>;
 };
@@ -55,8 +52,7 @@ function App() {
           card: "shadow-none border border-gray-200",
         },
       }}
-      redirectUrl={"/dashboard"}
-    >
+      redirectUrl={"/dashboard"}>
       <Router>
         <Layout>
           <Routes>
@@ -123,14 +119,14 @@ function App() {
             />
 
             {/* Redirect signed in users from home to dashboard */}
-            {/* <Route
+            <Route
               path="/"
               element={
                 <SignedIn>
                   <Navigate to="/dashboard" replace />
                 </SignedIn>
               }
-            /> */}
+            />
 
             {/* Fallback redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />

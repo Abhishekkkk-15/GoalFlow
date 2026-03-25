@@ -8,7 +8,7 @@ import { onboardingQuestions } from "../data/questions";
 import { QuestionResponse } from "../types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
-import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { useAppDispatch } from "../app/hooks";
 import { setTasks } from "../features/task/taskSlice";
 import { setPlans } from "../features/plan/planSlice";
 import { setTitle } from "../features/titleSlice";
@@ -53,14 +53,13 @@ export const Onboarding: React.FC = () => {
 
   const handleSubmit = async () => {
     setLoading(true);
-    // Simulate API call
-    const qAnda = [];
-    for (let index = 0; index < onboardingQuestions.length; index++) {
-      qAnda[index] = {
-        question: onboardingQuestions[index].question,
-        answer: responses[index],
+    const qAnda = onboardingQuestions.map((question) => {
+      const response = responses.find((r) => r.questionId === question.id);
+      return {
+        question: question.question,
+        answer: response?.answer ?? (question.required ? "" : ""),
       };
-    }
+    });
 
     const res = await axios.post(
       "http://localhost:5000/api/generate-plan",
@@ -80,6 +79,8 @@ export const Onboarding: React.FC = () => {
         createdAt: res.data.data.createdAt,
       })
     );
+
+    localStorage.setItem("onboarding-completed", "true");
     setLoading(false);
     navigate("/dashboard");
   };

@@ -5,7 +5,13 @@ import { Card } from "../components/ui/Card";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { EmptyState } from "../components/ui/EmptyState";
 import { DailyTask } from "../types";
-import { CheckCircle, Circle, Flame, RotateCcw, TrendingUp } from "lucide-react";
+import {
+  CheckCircle,
+  Circle,
+  Flame,
+  RotateCcw,
+  TrendingUp,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { setTasks } from "../features/task/taskSlice";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -15,7 +21,7 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const tasks = useAppSelector((state) => state.task);
   const [regenerating, setRegenerating] = useState(false);
-
+  console.log(tasks);
   const toLocalDateKey = (input: string | Date) => {
     const d = typeof input === "string" ? new Date(input) : input;
     const year = d.getFullYear();
@@ -42,39 +48,39 @@ export const Dashboard: React.FC = () => {
     );
   }, [today]);
 
-  const stats = useMemo(() => {
-    const tasksToday = tasks.filter(
-      (task: DailyTask) => toLocalDateKey(task.dueDate) === todayKey
-    );
-    const completedToday = tasksToday.filter((task) => task.completed).length;
-    const progressToday =
-      tasksToday.length > 0
-        ? (completedToday / tasksToday.length) * 100
-        : 0;
+  // const stats = useMemo(() => {
+  //   const tasksToday = tasks.filter(
+  //     (task: DailyTask) => toLocalDateKey(task.dueDate) === todayKey
+  //   );
+  //   const completedToday = tasksToday.filter((task) => task.completed).length;
+  //   const progressToday =
+  //     tasksToday.length > 0 ? (completedToday / tasksToday.length) * 100 : 0;
 
-    const tasksWeek = tasks.filter((task) =>
-      last7Keys.has(toLocalDateKey(task.dueDate))
-    );
-    const completedThisWeek = tasksWeek.filter((task) => task.completed).length;
-    const progressThisWeek =
-      tasksWeek.length > 0 ? (completedThisWeek / tasksWeek.length) * 100 : 0;
+  //   const tasksWeek = tasks.filter((task) =>
+  //     last7Keys.has(toLocalDateKey(task.dueDate))
+  //   );
+  //   const completedThisWeek = tasksWeek.filter((task) => task.completed).length;
+  //   const progressThisWeek =
+  //     tasksWeek.length > 0 ? (completedThisWeek / tasksWeek.length) * 100 : 0;
 
-    // "Streak" = consecutive days ending today where all tasks for the day are completed.
-    let streak = 0;
-    for (let i = 0; i < 400; i++) {
-      const day = new Date(today);
-      day.setDate(day.getDate() - i);
-      const key = toLocalDateKey(day);
-      const tasksOnDay = tasks.filter((task) => toLocalDateKey(task.dueDate) === key);
+  //   // "Streak" = consecutive days ending today where all tasks for the day are completed.
+  //   let streak = 0;
+  //   for (let i = 0; i < 400; i++) {
+  //     const day = new Date(today);
+  //     day.setDate(day.getDate() - i);
+  //     const key = toLocalDateKey(day);
+  //     const tasksOnDay = tasks.filter(
+  //       (task) => toLocalDateKey(task.dueDate) === key
+  //     );
 
-      if (tasksOnDay.length === 0) break;
-      const allDone = tasksOnDay.every((task) => task.completed);
-      if (!allDone) break;
-      streak++;
-    }
+  //     if (tasksOnDay.length === 0) break;
+  //     const allDone = tasksOnDay.every((task) => task.completed);
+  //     if (!allDone) break;
+  //     streak++;
+  //   }
 
-    return { progressToday, completedThisWeek, progressThisWeek, streak };
-  }, [last7Keys, tasks, today, todayKey]);
+  //   return { progressToday, completedThisWeek, progressThisWeek, streak };
+  // }, [last7Keys, tasks, today, todayKey]);
 
   const toggleTaskCompletion = (taskId: string) => {
     const updatedTasks = tasks.map((task) =>
@@ -102,16 +108,91 @@ export const Dashboard: React.FC = () => {
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((task) => task.completed).length;
   const remainingTasks = totalTasks - completedTasks;
+  // --- utils ---
+  const normalizeDate = (d: Date) => {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  };
 
+  // CORE LOGIC (single source of truth)
+  const isTaskForDate = (task: DailyTask, date: Date) => {
+    const start = normalizeDate(new Date(task.startDate));
+    const current = normalizeDate(date);
+
+    if (start > current) return false;
+
+    switch (task.frequency) {
+      case "daily":
+        return true;
+
+      case "weekly":
+        return start.getDay() === current.getDay();
+
+      case "monthly":
+        return start.getDate() === current.getDate();
+
+      case "once":
+        return start.getTime() === current.getTime();
+
+      default:
+        return false;
+    }
+  };
+
+  // reusable function
+  const getTasksForDate = (date: Date) => {
+    return tasks.filter((task) => isTaskForDate(task, date));
+  };
   const tasksToday = useMemo(() => {
-    return [...tasks]
-      .filter((task) => toLocalDateKey(task.dueDate) === todayKey)
-      .sort((a, b) => {
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      });
-  }, [tasks, todayKey]);
+    return getTasksForDate(today).sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return 0;
+    });
+  }, [tasks, today]);
+  const stats = useMemo(() => {
+    const tasksToday = getTasksForDate(today);
 
+    const completedToday = tasksToday.filter((t) => t.completed).length;
+    const progressToday =
+      tasksToday.length > 0 ? (completedToday / tasksToday.length) * 100 : 0;
+
+    // last 7 days
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      return normalizeDate(d);
+    });
+
+    const tasksWeek = last7Days.flatMap((d) => getTasksForDate(d));
+
+    const completedThisWeek = tasksWeek.filter((t) => t.completed).length;
+    const progressThisWeek =
+      tasksWeek.length > 0 ? (completedThisWeek / tasksWeek.length) * 100 : 0;
+
+    // streak
+    let streak = 0;
+    for (let i = 0; i < 400; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+
+      const tasksOnDay = getTasksForDate(d);
+
+      if (tasksOnDay.length === 0) break;
+
+      const allDone = tasksOnDay.every((t) => t.completed);
+      if (!allDone) break;
+
+      streak++;
+    }
+
+    return {
+      progressToday,
+      completedThisWeek,
+      progressThisWeek,
+      streak,
+    };
+  }, [tasks, today]);
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
@@ -191,8 +272,7 @@ export const Dashboard: React.FC = () => {
                   variant="outline"
                   onClick={handleRegeneratePlan}
                   loading={regenerating}
-                  className="flex items-center"
-                >
+                  className="flex items-center">
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Regenerate Plan
                 </Button>
@@ -213,8 +293,7 @@ export const Dashboard: React.FC = () => {
                         variant="outline"
                         onClick={handleRegeneratePlan}
                         loading={regenerating}
-                        className="w-full sm:w-auto"
-                      >
+                        className="w-full sm:w-auto">
                         <RotateCcw className="w-4 h-4 mr-2" />
                         Regenerate Plan
                       </Button>
@@ -228,16 +307,14 @@ export const Dashboard: React.FC = () => {
                         task.completed
                           ? "bg-gray-50 border-gray-200"
                           : "bg-white border-gray-200"
-                      }`}
-                    >
+                      }`}>
                       <button
                         type="button"
                         aria-label={`Mark task "${task.title}" as ${
                           task.completed ? "not completed" : "completed"
                         }`}
                         onClick={() => toggleTaskCompletion(task.id)}
-                        className="mr-4 mt-1 flex-shrink-0"
-                      >
+                        className="mr-4 mt-1 flex-shrink-0">
                         {task.completed ? (
                           <CheckCircle className="h-6 w-6 text-green-600" />
                         ) : (
@@ -251,15 +328,13 @@ export const Dashboard: React.FC = () => {
                             task.completed
                               ? "line-through text-gray-500"
                               : "text-gray-900"
-                          }`}
-                        >
+                          }`}>
                           {task.title}
                         </h3>
                         <p
                           className={`text-sm ${
                             task.completed ? "text-gray-400" : "text-gray-600"
-                          }`}
-                        >
+                          }`}>
                           {task.description}
                         </p>
                         <span
@@ -267,8 +342,7 @@ export const Dashboard: React.FC = () => {
                             task.completed
                               ? "bg-green-100 text-green-800"
                               : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
+                          }`}>
                           {task.category}
                         </span>
                       </div>
@@ -322,9 +396,7 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Remaining</span>
-                  <span className="font-medium">
-                    {remainingTasks}
-                  </span>
+                  <span className="font-medium">{remainingTasks}</span>
                 </div>
               </div>
             </Card>

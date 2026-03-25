@@ -24,11 +24,13 @@ export const Plan: React.FC = () => {
   };
   const planData = useAppSelector((state) => state.plan);
   const title = useAppSelector((state) => state.title);
-  const categories: PlanCategory[] = planData.flatMap((p) => p.categories);
+
+  const categories: [] = planData;
 
   const totalCategories = categories.length;
+
   const totalPlanTasks = categories.reduce(
-    (sum, category) => sum + category.tasks.length,
+    (sum, category) => sum + (category?.tasks?.length || 0),
     0
   );
 
@@ -58,17 +60,16 @@ export const Plan: React.FC = () => {
               <Card key={category.id} className="p-6">
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    {category.name}
+                    {category?.name}
                   </h2>
-                  <p className="text-gray-600">{category.description}</p>
+                  <p className="text-gray-600">{category?.description}</p>
                 </div>
 
                 <div className="space-y-4">
-                  {category.tasks.map((task) => (
+                  {category?.tasks?.map((task) => (
                     <div
                       key={task.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors duration-200"
-                    >
+                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors duration-200">
                       <div className="flex items-start justify-between mb-3">
                         <h3 className="text-lg font-medium text-gray-900">
                           {task.title}
@@ -76,8 +77,7 @@ export const Plan: React.FC = () => {
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(
                             task.priority
-                          )}`}
-                        >
+                          )}`}>
                           {task.priority}
                         </span>
                       </div>
@@ -102,8 +102,7 @@ export const Plan: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={() => navigate("/onboarding")}
-                  className="w-full sm:w-auto"
-                >
+                  className="w-full sm:w-auto">
                   Start Onboarding
                 </Button>
               }

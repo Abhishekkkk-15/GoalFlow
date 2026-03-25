@@ -64,7 +64,9 @@ Plan Schema //they are absolute:
       "title": "string (task title)",
       "description": "string (optional task details)",
       "category": "string (must match one of the category names above)",
+      "frequency": "daily | weekly | monthly | once",
       "dueDate": "ISO 8601 date format (YYYY-MM-DDTHH:mm:ssZ),
+      "startData": "ISO 8601 date format (YYYY-MM-DDTHH:mm:ssZ),
       "completed": false,
       "priority": low | high | medium
   }},
@@ -73,6 +75,8 @@ Plan Schema //they are absolute:
       "description": "string (optional task details)",
       "category": "string (must match one of the category names above)",
       "dueDate": "ISO 8601 date format (YYYY-MM-DDTHH:mm:ssZ),
+      "startData": "ISO 8601 date format (YYYY-MM-DDTHH:mm:ssZ),
+      "frequency": "daily | weekly | monthly | once",
       "completed": false,
       "priority": low | high | medium
   }}
@@ -86,7 +90,45 @@ Plan Schema //they are absolute:
 - If user gives a timeline (days, weeks, months), spread the tasks accordingly with realistic due dates.
 - Keep "completed" always false initially.
 - "isActive" should always be true.
+- Generate dueDate by adding days/weeks to CURRENT DATE
+- Example:
+  CURRENT DATE = 2026-03-25
+  Task 1 → 2026-03-25
+  Task 2 → 2026-03-27
+  Task 3 → 2026-04-01
+- CATEGORY CONSISTENCY (CRITICAL)
+   - Every task in root "tasks" MUST have a "category"
+   - That category MUST EXACTLY match one of the category.name values
+   - If mismatch → INVALID
+- Each task MUST include a "startDate" field in ISO 8601 format.
+- "startDate" represents when the task begins.
+- You MUST use the provided CURRENT DATE as the base reference.
+- Rules by frequency:
+  1. DAILY:
+     - startDate MUST be TODAY or a future date
+     - Example: startDate = CURRENT DATE
+  2. WEEKLY:
+     - startDate MUST be the NEXT occurrence of that weekday
+     - Example:
+       If task is "every Monday" and today is Wednesday,
+       startDate = next Monday
+  3. MONTHLY:
+     - startDate MUST be the NEXT valid date in the month
+     - Example:
+       If task is "monthly review on 10th" and today is 15th,
+       startDate = 10th of next month
+  4. ONCE:
+     - startDate MUST be same as dueDate
 
+- startDate MUST NEVER be in the past.
+
+- startDate <= dueDate (if dueDate exists)
+
+- All recurring tasks (daily/weekly/monthly):
+  - MUST NOT have random past dates
+  - MUST align logically with CURRENT DATE
+
+- If these rules are violated → output is INVALID
 Now, based on the user’s answers, generate the plan JSON.
 {userData}
 `);

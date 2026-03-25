@@ -8,7 +8,7 @@ export interface User {
 
 export interface Question {
   id: string;
-  type: 'multiple-choice' | 'multiple-select' | 'text';
+  type: "multiple-choice" | "multiple-select" | "text";
   question: string;
   options?: string[];
   required: boolean;
@@ -26,8 +26,10 @@ export interface DailyTask {
   category: string;
   completed: boolean;
   dueDate: string;
+  startDate: string;
   // Backend may provide priority for tasks; keep it optional for now.
   priority?: "low" | "medium" | "high";
+  frequency: "daily" | "weekly" | "monthly" | "once";
 }
 
 export interface Plan {
@@ -55,7 +57,7 @@ export interface PlanTask {
 export interface ChatMessage {
   id: string;
   content: string;
-  sender: 'user' | 'ai';
+  sender: "user" | "ai";
   timestamp: string;
 }
 

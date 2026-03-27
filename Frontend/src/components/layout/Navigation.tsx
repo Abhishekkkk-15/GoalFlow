@@ -9,7 +9,9 @@ import {
   User, 
   LogOut,
   Menu,
-  X
+  X,
+  LineChart,
+  Settings2
 } from 'lucide-react';
 
 const navigationItems = [
@@ -17,6 +19,8 @@ const navigationItems = [
   { name: 'My Plan', href: '/plan', icon: Target },
   { name: 'AI Chat', href: '/chat', icon: MessageCircle },
   { name: 'Profile', href: '/profile', icon: User },
+  { name: 'Analytics', href: '/analytics', icon: LineChart },
+  { name: 'Preferences', href: '/preferences', icon: Settings2 },
 ];
 
 export const Navigation: React.FC = () => {

@@ -1,6 +1,4 @@
-import { model, Schema ,Document} from "mongoose";
-import { hasUncaughtExceptionCaptureCallback } from "process";
-import { Interface } from "readline";
+import { model, Schema, Document } from "mongoose";
 
 interface ICategory{
     name:string;
@@ -34,3 +32,6 @@ const planSchema = new Schema<IPlan>(
 )
 
 export const plan = model<IPlan>("Plan",planSchema)
+
+// Backward/forward compatible named export.
+export const Plan = plan;

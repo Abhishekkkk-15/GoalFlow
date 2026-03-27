@@ -1,14 +1,40 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Button } from "../components/ui/Button";
 import { Clock, Flag, Calendar } from "lucide-react";
-import { useAppSelector } from "../app/hooks";
-import { PlanCategory } from "../types";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../components/layout/PageHeader";
+import { createApiClient } from "../api/client";
+import { setPlans } from "../features/plan/planSlice";
+
+type BackendCategory = {
+  id?: string;
+  name?: string;
+  description?: string;
+};
+
+type BackendTask = {
+  id?: string;
+  _id?: string;
+  title: string;
+  description?: string;
+  category: string;
+  priority?: "low" | "medium" | "high";
+  frequency?: string;
+  dueDate?: string;
+};
+
+type BackendPlan = {
+  categories?: BackendCategory[];
+  tasks?: BackendTask[];
+};
 
 export const Plan: React.FC = () => {
+  const { getToken } = useAuth();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -25,7 +51,58 @@ export const Plan: React.FC = () => {
   const planData = useAppSelector((state) => state.plan);
   const title = useAppSelector((state) => state.title);
 
-  const categories: [] = planData;
+  const [currentPlan, setCurrentPlan] = useState<BackendPlan | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const token = await getToken();
+        if (!token) return;
+        const api = createApiClient(token);
+        const res = await api.get("/api/plans/current");
+        const plan = res.data?.plan;
+        if (!alive) return;
+        setCurrentPlan(plan);
+
+        // Keep Redux aligned for other pages.
+        dispatch(setPlans(plan?.categories ?? []));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const categories = useMemo(() => {
+    const fromRedux = planData ?? [];
+    const planCategories = currentPlan?.categories ?? fromRedux;
+    const tasks = currentPlan?.tasks ?? [];
+
+    const tasksByCategory = tasks.reduce(
+      (acc: Record<string, BackendTask[]>, t: BackendTask) => {
+      const key = t.category ?? "uncategorized";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(t);
+      return acc;
+      },
+      {}
+    );
+
+    return planCategories.map((category: BackendCategory) => ({
+      id: category.id ?? category.name,
+      name: category.name,
+      description: category.description,
+      tasks: tasksByCategory[category.name] ?? [],
+    }));
+  }, [currentPlan, planData]);
 
   const totalCategories = categories.length;
 
@@ -39,6 +116,16 @@ export const Plan: React.FC = () => {
   const createdAtLabel = title.createdAt
     ? new Date(title.createdAt).toLocaleDateString()
     : "—";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
+        <div className="max-w-4xl mx-auto">
+          <PageHeader title="My Plan" description="Loading plan..." />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
@@ -68,7 +155,7 @@ export const Plan: React.FC = () => {
                 <div className="space-y-4">
                   {category?.tasks?.map((task) => (
                     <div
-                      key={task.id}
+                      key={task.id ?? task._id}
                       className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors duration-200">
                       <div className="flex items-start justify-between mb-3">
                         <h3 className="text-lg font-medium text-gray-900">
@@ -86,7 +173,7 @@ export const Plan: React.FC = () => {
 
                       <div className="flex items-center text-sm text-gray-500">
                         <Clock className="h-4 w-4 mr-1" />
-                        <span>{task.timeframe}</span>
+                      <span>{task.frequency ?? task.timeframe ?? "—"}</span>
                       </div>
                     </div>
                   ))}

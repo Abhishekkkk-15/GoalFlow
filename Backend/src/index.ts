@@ -6,6 +6,9 @@ import clerkWebhook from "./routes/route.clerkWebhook";
 import { connectDB } from "./config/db";
 import bodyParser from "body-parser";
 import planRouter from "./routes/plan.route";
+import tasksRouter from "./routes/tasks.route";
+import preferencesRouter from "./routes/preferences.route";
+import plansRouter from "./routes/plans.route";
 
 config();
 const app = express();
@@ -20,9 +23,20 @@ app.use("/api/webhooks", clerkWebhook);
 app.use(express.json());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
-// connectDB();
+
+// Connect to MongoDB before serving requests.
+const mongoUri = process.env.MONGO_URI;
+if (!mongoUri) {
+  // Fail fast so configuration issues are obvious.
+  throw new Error("Missing required environment variable: MONGO_URI");
+}
+connectDB();
+
 // All Routes
 app.use("/api", planRouter);
+app.use("/api", tasksRouter);
+app.use("/api", preferencesRouter);
+app.use("/api", plansRouter);
 
 app.get("/", (req, res) => {
   res.send("hey there");

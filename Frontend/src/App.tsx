@@ -9,10 +9,12 @@ import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import { Layout } from "./components/layout/Layout";
 import { Landing } from "./pages/Landing";
 import { Onboarding } from "./pages/Onboarding";
-import { Dashboard } from "./pages/Dashboard";
+import { DashboardPage } from "./pages/DashboardPage";
 import { Plan } from "./pages/Plan";
 import { Chat } from "./pages/Chat";
 import { Profile } from "./pages/Profile";
+import { Analytics } from "./pages/Analytics";
+import { Preferences } from "./pages/Preferences";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -81,7 +83,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <OnboardingCheck>
-                    <Dashboard />
+                    <DashboardPage />
                   </OnboardingCheck>
                 </ProtectedRoute>
               }
@@ -114,6 +116,28 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <OnboardingCheck>
+                    <Analytics />
+                  </OnboardingCheck>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/preferences"
+              element={
+                <ProtectedRoute>
+                  <OnboardingCheck>
+                    <Preferences />
+                  </OnboardingCheck>
                 </ProtectedRoute>
               }
             />

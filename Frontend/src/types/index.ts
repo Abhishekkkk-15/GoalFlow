@@ -25,10 +25,16 @@ export interface DailyTask {
   description: string;
   category: string;
   completed: boolean;
-  dueDate: string;
-  startDate: string;
+  dueDate?: string;
+  startDate?: string;
+  completedAt?: string;
   priority?: "low" | "medium" | "high";
-  frequency: "daily" | "weekly" | "monthly" | "once";
+  frequency: "daily" | "weekly" | "monthly" | "quarterly" | "one-time" | "once";
+
+  // Recurring instance metadata returned by the backend task generator.
+  instanceDate?: string;
+  instanceId?: string;
+  isRecurringInstance?: boolean;
 }
 
 export interface Plan {

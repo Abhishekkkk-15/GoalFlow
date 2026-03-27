@@ -22,31 +22,12 @@ export const Dashboard: React.FC = () => {
   const tasks = useAppSelector((state) => state.task);
   const [regenerating, setRegenerating] = useState(false);
   console.log(tasks);
-  const toLocalDateKey = (input: string | Date) => {
-    const d = typeof input === "string" ? new Date(input) : input;
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
 
   const today = useMemo(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
     return t;
   }, []);
-
-  const todayKey = useMemo(() => toLocalDateKey(today), [today]);
-
-  const last7Keys = useMemo(() => {
-    return new Set(
-      Array.from({ length: 7 }, (_, idx) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() - idx);
-        return toLocalDateKey(d);
-      })
-    );
-  }, [today]);
 
   // const stats = useMemo(() => {
   //   const tasksToday = tasks.filter(
@@ -117,7 +98,7 @@ export const Dashboard: React.FC = () => {
 
   // CORE LOGIC (single source of truth)
   const isTaskForDate = (task: DailyTask, date: Date) => {
-    const start = normalizeDate(new Date(task.startDate));
+    const start = normalizeDate(new Date(task.startDate ?? Date.now()));
     const current = normalizeDate(date);
 
     if (start > current) return false;
@@ -126,10 +107,11 @@ export const Dashboard: React.FC = () => {
       case "daily":
         return true;
 
-      case "weekly":
+      case "weekly": {
         const taskDay = start.getDay(); // e.g. Monday
         const todayDay = current.getDay(); // e.g. today
         return taskDay === todayDay;
+      }
 
       case "monthly":
         return start.getDate() === current.getDate();

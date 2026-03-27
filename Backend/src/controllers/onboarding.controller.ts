@@ -28,7 +28,14 @@ export interface PlanTask {
   id: string;
   title: string;
   description: string;
-  timeframe: string;
+  frequency:
+    | "daily"
+    | "weekly"
+    | "monthly"
+    | "quarterly"
+    | "once"
+    | "one-time";
+  startDate: Date;
   completed: boolean;
   priority: "low" | "medium" | "high";
   category: string;
@@ -75,7 +82,7 @@ export const generateNewPlan = async (
     const parsedData = extractPlanJSON(response.text);
     console.log("Parsed Res :", parsedData);
     const savedData = await storePlanInDBWithInsertMany(user._id, parsedData);
-    res.status(200).json({ message: "Done", data: parsedData, success: true });
+    res.status(200).json({ message: "Done", data: savedData, success: true });
   } catch (error) {
     console.log("Error : ", error);
   }
@@ -104,7 +111,35 @@ async function storePlanInDBWithInsertMany(
       description: taskData.description,
       completed: taskData.completed,
       category: taskData.category,
+      frequency: taskData.frequency === "once" ? "once" : taskData.frequency,
+      startDate: taskData.startDate ? new Date(taskData.startDate) : undefined,
       dueDate: taskData.dueDate ? new Date(taskData.dueDate) : undefined,
+      priority: taskData.priority,
+      isRecurring: taskData.frequency !== "once",
+      recurrence:
+        taskData.frequency === "daily" ||
+        taskData.frequency === "weekly" ||
+        taskData.frequency === "monthly" ||
+        taskData.frequency === "quarterly"
+          ? {
+              pattern: taskData.frequency as any,
+              interval: 1,
+              ...(taskData.frequency === "weekly"
+                ? {
+                    daysOfWeek: [
+                      taskData.startDate ? new Date(taskData.startDate).getDay() : 1,
+                    ],
+                  }
+                : {}),
+              ...(taskData.frequency === "monthly" || taskData.frequency === "quarterly"
+                ? {
+                    dayOfMonth: taskData.startDate
+                      ? new Date(taskData.startDate).getDate()
+                      : 1,
+                  }
+                : {}),
+            }
+          : undefined,
     }));
 
     const insertedTasks = await Task.insertMany(tasksToInsert);
@@ -112,6 +147,13 @@ async function storePlanInDBWithInsertMany(
 
     savedPlan.tasks = taskIds;
     await savedPlan.save();
+
+    // Mark as current plan for the user
+    await User.findOneAndUpdate(
+      { _id: userId },
+      { currentPlan: savedPlan._id },
+      { new: true }
+    );
 
     // Return complete document with populated tasks
     return await Plan.findById(savedPlan._id).populate("tasks");

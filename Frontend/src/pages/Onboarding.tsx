@@ -7,16 +7,18 @@ import { ProgressBar } from "../components/ui/ProgressBar";
 import { onboardingQuestions } from "../data/questions";
 import { QuestionResponse } from "../types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import axios from "axios";
+import { useAuth } from "@clerk/clerk-react";
 import { useAppDispatch } from "../app/hooks";
 import { setTasks } from "../features/task/taskSlice";
 import { setPlans } from "../features/plan/planSlice";
 import { setTitle } from "../features/titleSlice";
+import { createApiClient } from "../api/client";
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const { getToken } = useAuth();
 
   const currentQuestion = onboardingQuestions[currentStep];
   const progress = ((currentStep + 1) / onboardingQuestions.length) * 100;
@@ -62,24 +64,21 @@ export const Onboarding: React.FC = () => {
         };
       });
 
-      const res = await axios.post(
-        "http://localhost:5000/api/generate-plan",
-        {
-          qAnda: qAnda,
-        },
-        {
-          withCredentials: true,
-        }
-      );
+      const token = await getToken();
+      const api = createApiClient(token);
 
-      dispatch(setTasks(res.data.data.tasks));
-      dispatch(setPlans(res.data.data.plan));
+      const res = await api.post("/api/generate-plan", { qAnda });
+
+      const savedPlan = res.data.data;
+      dispatch(setPlans(savedPlan.categories ?? []));
       dispatch(
         setTitle({
-          title: res.data.data.title,
-          createdAt: res.data.data.createdAt,
+          title: savedPlan.title ?? "",
+          createdAt: savedPlan.createdAt ?? "",
         })
       );
+      // Dashboard will fetch the latest date-based task instances.
+      dispatch(setTasks([]));
 
       localStorage.setItem("onboarding-completed", "true");
       setLoading(false);

@@ -15,4 +15,3 @@ export const createApiClient = (token?: string | null): AxiosInstance => {
     headers,
   } satisfies AxiosRequestConfig);
 };
-

@@ -9,6 +9,9 @@ import planRouter from "./routes/plan.route";
 import tasksRouter from "./routes/tasks.route";
 import preferencesRouter from "./routes/preferences.route";
 import plansRouter from "./routes/plans.route";
+import billingRouter from "./routes/billing.route";
+import stripeWebhookRouter from "./routes/stripeWebhook.route";
+import chatRouter from "./routes/chat.route";
 
 config();
 const app = express();
@@ -20,6 +23,7 @@ app.use(
 );
 app.use(clerkMiddleware());
 app.use("/api/webhooks", clerkWebhook);
+app.use("/api/webhooks", stripeWebhookRouter);
 app.use(express.json());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
@@ -37,6 +41,8 @@ app.use("/api", planRouter);
 app.use("/api", tasksRouter);
 app.use("/api", preferencesRouter);
 app.use("/api", plansRouter);
+app.use("/api", billingRouter);
+app.use("/api", chatRouter);
 
 app.get("/", (req, res) => {
   res.send("hey there");

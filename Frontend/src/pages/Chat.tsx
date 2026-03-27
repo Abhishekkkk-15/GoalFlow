@@ -1,17 +1,49 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
-import { EmptyState } from '../components/ui/EmptyState';
-import { ChatMessage } from '../types';
-import { Send, Bot, User } from 'lucide-react';
-import { PageHeader } from '../components/layout/PageHeader';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import axios from "axios";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Card } from "../components/ui/Card";
+import { EmptyState } from "../components/ui/EmptyState";
+import { ChatMessage } from "../types";
+import { Send, Bot, User, Crown } from "lucide-react";
+import { PageHeader } from "../components/layout/PageHeader";
+import { createApiClient } from "../api/client";
+import { ProgressBar } from "../components/ui/ProgressBar";
+
+type ChatApiMessage = {
+  sender: "user" | "ai";
+  message: string;
+  timestamp: string;
+};
+
+type ChatApiResponse = {
+  chat: {
+    messages: ChatApiMessage[];
+  };
+  usage: {
+    monthKey: string;
+    tokensUsed: number;
+    limit: number | null;
+    planTier: "free" | "pro";
+    limitReached?: boolean;
+  };
+};
+
+type ChatApiErrorResponse = {
+  error?: string;
+  usage?: ChatApiResponse["usage"];
+};
 
 export const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [usage, setUsage] = useState<ChatApiResponse["usage"] | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const { getToken } = useAuth();
 
   const suggestedPrompts = [
     "I’m stuck—help me pick one small next step",
@@ -20,31 +52,46 @@ export const Chat: React.FC = () => {
     "Give me a quick motivation plan for the next 10 minutes",
   ];
 
-  const aiReplyProvider = async (userText: string): Promise<string> => {
-    const lower = userText.toLowerCase();
-    await new Promise((resolve) => setTimeout(resolve, 900));
+  const syncFromApi = (payload: ChatApiResponse) => {
+    const mapped: ChatMessage[] = (payload.chat?.messages ?? []).map((m) => ({
+      id: `${m.timestamp}_${m.sender}`,
+      content: m.message,
+      sender: m.sender === "ai" ? "ai" : "user",
+      timestamp: m.timestamp,
+    }));
+    setMessages(mapped);
+    setUsage(payload.usage);
+  };
 
-    if (lower.includes('stuck') || lower.includes('overwhelm')) {
-      return "Let’s make this easy. Pick one tiny action you can finish in 5 minutes. Then we’ll schedule the next micro-step right after it. What’s the smallest action you can do today?";
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (axios.isAxiosError(err)) {
+      const data = err.response?.data as ChatApiErrorResponse | undefined;
+      if (data?.usage) setUsage(data.usage);
+      if (typeof data?.error === "string" && data.error.trim()) return data.error;
+      if (typeof err.response?.statusText === "string" && err.response.statusText) {
+        return err.response.statusText;
+      }
     }
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
 
-    if (lower.includes('today') || lower.includes('focus')) {
-      return "Today’s focus: complete the smallest high-impact task first. After that, do a 2-minute “momentum check” (how you feel + what to adjust). Want to tell me which task you’re currently avoiding?";
-    }
-
-    if (lower.includes('missed') || lower.includes('back on track') || lower.includes('miss')) {
-      return "Missing a task isn’t failure—it’s data. Let’s reset gently: (1) identify what got in the way, (2) shrink the next task by 50%, and (3) add a simple trigger (time/place) so it’s easier to start.";
-    }
-
-    return "Thanks for sharing. Here’s a simple plan: (1) choose one goal you care about, (2) define the next action in one sentence, and (3) do it for 10 minutes. What’s your next action right now?";
+  const loadChat = async () => {
+    const token = await getToken();
+    if (!token) throw new Error("Missing Clerk token");
+    const api = createApiClient(token);
+    const res = await api.get("/api/chat");
+    syncFromApi(res.data);
   };
 
   const handleSendText = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
+    setApiError(null);
+    const userMessageId = Date.now().toString();
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: userMessageId,
       content: trimmed,
       sender: 'user',
       timestamp: new Date().toISOString()
@@ -54,7 +101,19 @@ export const Chat: React.FC = () => {
     setIsThinking(true);
 
     try {
-      const aiText = await aiReplyProvider(trimmed);
+      const token = await getToken();
+      if (!token) throw new Error("Missing Clerk token");
+      const api = createApiClient(token);
+
+      const res = await api.post("/api/chat", { message: trimmed });
+      const data = res.data as ChatApiResponse & { reply?: string };
+
+      if (data?.chat) {
+        syncFromApi(data);
+        return;
+      }
+
+      const aiText = data.reply ?? "Sorry, I couldn't generate a response.";
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: aiText,
@@ -62,6 +121,9 @@ export const Chat: React.FC = () => {
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, aiMessage]);
+    } catch (err: unknown) {
+      setMessages((prev) => prev.filter((m) => m.id !== userMessageId));
+      setApiError(getErrorMessage(err, "Failed to send message"));
     } finally {
       setIsThinking(false);
     }
@@ -86,6 +148,44 @@ export const Chat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isThinking]);
 
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        await loadChat();
+      } catch (err: unknown) {
+        if (alive) setApiError(getErrorMessage(err, "Failed to load chat"));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const limitProgress = useMemo(() => {
+    if (!usage?.limit) return 0;
+    return (usage.tokensUsed / usage.limit) * 100;
+  }, [usage]);
+
+  const handleUpgrade = async () => {
+    setApiError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Missing Clerk token");
+      const api = createApiClient(token);
+      const res = await api.post("/api/billing/checkout");
+      const url = res.data?.url as string | undefined;
+      if (!url) throw new Error("Missing checkout URL");
+      window.location.href = url;
+    } catch (err: unknown) {
+      setApiError(getErrorMessage(err, "Failed to start checkout"));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
       <div className="max-w-4xl mx-auto h-full flex flex-col">
@@ -95,10 +195,60 @@ export const Chat: React.FC = () => {
           description="Get instant advice and motivation from your personal AI coach."
         />
 
+        {/* Usage / Upgrade */}
+        <Card className="p-4 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Crown className="w-5 h-5 text-yellow-600" />
+              <div className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Plan:</span>{" "}
+                {usage?.planTier ?? "free"}
+                {usage?.limit ? (
+                  <>
+                    {" "}
+                    · {usage.tokensUsed}/{usage.limit} tokens this month (
+                    {usage.monthKey})
+                  </>
+                ) : (
+                  <> · Unlimited</>
+                )}
+              </div>
+            </div>
+            {usage?.planTier === "free" && (
+              <Button
+                variant="outline"
+                onClick={handleUpgrade}
+                aria-label="Upgrade to Pro"
+              >
+                Upgrade to Pro
+              </Button>
+            )}
+          </div>
+          {usage?.limit ? (
+            <div className="mt-3">
+              <ProgressBar progress={limitProgress} />
+              {usage.tokensUsed >= usage.limit ? (
+                <div className="text-xs text-red-600 mt-2">
+                  You’ve reached your free monthly token limit. Upgrade for
+                  unlimited access.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </Card>
+
         {/* Chat Container */}
         <Card className="flex-1 flex flex-col overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {apiError && (
+              <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+                {apiError}
+              </div>
+            )}
+            {loading && (
+              <div className="text-sm text-gray-600">Loading chat...</div>
+            )}
             {messages.length === 0 && !isThinking && (
               <EmptyState
                 title="Start your coaching"
@@ -182,13 +332,19 @@ export const Chat: React.FC = () => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
-                disabled={isThinking}
+                disabled={isThinking || (usage?.planTier === "free" && Boolean(usage?.limit) && usage.tokensUsed >= (usage.limit ?? 0))}
                 aria-label="Chat message"
                 className="flex-1"
               />
               <Button
                 type="submit"
-                disabled={!newMessage.trim() || isThinking}
+                disabled={
+                  !newMessage.trim() ||
+                  isThinking ||
+                  (usage?.planTier === "free" &&
+                    Boolean(usage?.limit) &&
+                    usage.tokensUsed >= (usage.limit ?? 0))
+                }
                 aria-label="Send chat message"
               >
                 <Send className="w-4 h-4" />

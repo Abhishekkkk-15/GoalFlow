@@ -10,6 +10,10 @@ import { Task } from "../models/task.mode";
 import { getAuth } from "@clerk/express";
 import { User } from "../models/user.mode";
 import { Types } from "mongoose";
+import {
+  getMonthKey,
+  incrementTokensUsedForMonth,
+} from "../services/tokenUsage.service";
 interface IQAndA {
   question: string;
   answer: {
@@ -28,13 +32,7 @@ export interface PlanTask {
   id: string;
   title: string;
   description: string;
-  frequency:
-    | "daily"
-    | "weekly"
-    | "monthly"
-    | "quarterly"
-    | "once"
-    | "one-time";
+  frequency: "daily" | "weekly" | "monthly" | "quarterly" | "once" | "one-time";
   startDate: Date;
   completed: boolean;
   priority: "low" | "medium" | "high";
@@ -80,8 +78,16 @@ export const generateNewPlan = async (
     const llmWithTool = llm.bindTools([getPresentTimeAndDate]);
     const response = await llm.invoke(input);
     const parsedData = extractPlanJSON(response.text);
-    console.log("Parsed Res :", parsedData);
     const savedData = await storePlanInDBWithInsertMany(user._id, parsedData);
+    const monthKey = getMonthKey(new Date());
+
+    const tokenUsage =
+      (response as any)?.response_metadata?.usage?.total_tokens ?? 0;
+    const updatedTokensUsed = await incrementTokensUsedForMonth(
+      user._id,
+      monthKey,
+      tokenUsage
+    );
     res.status(200).json({ message: "Done", data: savedData, success: true });
   } catch (error) {
     console.log("Error : ", error);
@@ -127,11 +133,14 @@ async function storePlanInDBWithInsertMany(
               ...(taskData.frequency === "weekly"
                 ? {
                     daysOfWeek: [
-                      taskData.startDate ? new Date(taskData.startDate).getDay() : 1,
+                      taskData.startDate
+                        ? new Date(taskData.startDate).getDay()
+                        : 1,
                     ],
                   }
                 : {}),
-              ...(taskData.frequency === "monthly" || taskData.frequency === "quarterly"
+              ...(taskData.frequency === "monthly" ||
+              taskData.frequency === "quarterly"
                 ? {
                     dayOfMonth: taskData.startDate
                       ? new Date(taskData.startDate).getDate()

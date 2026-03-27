@@ -27,7 +27,6 @@ export interface DailyTask {
   completed: boolean;
   dueDate: string;
   startDate: string;
-  // Backend may provide priority for tasks; keep it optional for now.
   priority?: "low" | "medium" | "high";
   frequency: "daily" | "weekly" | "monthly" | "once";
 }

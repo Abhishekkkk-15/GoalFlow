@@ -1,13 +1,16 @@
 import { Schema, model, Document } from "mongoose";
 
-export interface ITask extends Document{
-    plan: Schema.Types.ObjectId,
-    title: string;
-    description?: string;
-    completed: boolean;
-    categorie:string;
-    dueDate?:Date;
-    createdAT: Date;
+export interface ITask extends Document {
+  plan: Schema.Types.ObjectId;
+  title: string;
+  description?: string;
+  completed: boolean;
+  category: string;
+  dueDate?: Date;
+  startDate: Date;
+  createdAT: Date;
+  frequency: "daily" | "weekly" | "monthly" | "once";
+  priority?: "low" | "medium" | "high";
 }
 
 const taskSchema = new Schema<ITask>(
@@ -16,9 +19,22 @@ const taskSchema = new Schema<ITask>(
     title: { type: String, required: true },
     description: String,
     completed: { type: Boolean, default: false },
-    categorie:{type:String, required:true},
+    frequency: {
+      type: String,
+      enum: ["daily", "weekly", "monthly", "once"],
+      default: "daily",
+      required: true,
+    },
+    startDate: { type: Date },
+    category: { type: String, required: true },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
+    },
+
     dueDate: Date,
   },
   { timestamps: true }
-)
+);
 export const Task = model<ITask>("Task", taskSchema);

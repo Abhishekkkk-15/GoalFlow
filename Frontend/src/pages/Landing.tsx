@@ -1,11 +1,19 @@
 import React from "react";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Target, Brain, CheckCircle, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const Landing: React.FC = () => {
+  const { user } = useUser();
+  const navigate = useNavigate();
+
+  if (user) {
+    navigate("/dashboard");
+  }
   const isConBoarderd = localStorage.getItem("onboarding-completed");
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -34,8 +42,7 @@ export const Landing: React.FC = () => {
                       mode="modal"
                       forceRedirectUrl={
                         isConBoarderd ? "/dashboard" : "/onboarding"
-                      }
-                    >
+                      }>
                       <Button size="lg" className="w-full px-8 py-4">
                         Start Your Journey
                       </Button>
@@ -202,8 +209,7 @@ export const Landing: React.FC = () => {
           </p>
           <SignUpButton
             mode="modal"
-            forceRedirectUrl={isConBoarderd ? "/dashboard" : "/onboarding"}
-          >
+            forceRedirectUrl={isConBoarderd ? "/dashboard" : "/onboarding"}>
             <Button variant="secondary" size="lg" className="mt-8">
               Get Started Today
             </Button>

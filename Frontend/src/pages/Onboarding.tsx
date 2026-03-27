@@ -52,37 +52,42 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
-    const qAnda = onboardingQuestions.map((question) => {
-      const response = responses.find((r) => r.questionId === question.id);
-      return {
-        question: question.question,
-        answer: response?.answer ?? (question.required ? "" : ""),
-      };
-    });
+    try {
+      setLoading(true);
+      const qAnda = onboardingQuestions.map((question) => {
+        const response = responses.find((r) => r.questionId === question.id);
+        return {
+          question: question.question,
+          answer: response?.answer ?? (question.required ? "" : ""),
+        };
+      });
 
-    const res = await axios.post(
-      "http://localhost:5000/api/generate-plan",
-      {
-        qAnda: qAnda,
-      },
-      {
-        withCredentials: true,
-      }
-    );
+      const res = await axios.post(
+        "http://localhost:5000/api/generate-plan",
+        {
+          qAnda: qAnda,
+        },
+        {
+          withCredentials: true,
+        }
+      );
 
-    dispatch(setTasks(res.data.data.tasks));
-    dispatch(setPlans(res.data.data.plan));
-    dispatch(
-      setTitle({
-        title: res.data.data.title,
-        createdAt: res.data.data.createdAt,
-      })
-    );
+      dispatch(setTasks(res.data.data.tasks));
+      dispatch(setPlans(res.data.data.plan));
+      dispatch(
+        setTitle({
+          title: res.data.data.title,
+          createdAt: res.data.data.createdAt,
+        })
+      );
 
-    localStorage.setItem("onboarding-completed", "true");
-    setLoading(false);
-    navigate("/dashboard");
+      localStorage.setItem("onboarding-completed", "true");
+      setLoading(false);
+      navigate("/dashboard");
+    } catch (error) {
+      setLoading(false);
+      console.error(error);
+    }
   };
 
   const isCurrentResponseValid = () => {
@@ -108,8 +113,7 @@ export const Onboarding: React.FC = () => {
                   currentResponse === option
                     ? "border-black bg-gray-50"
                     : "border-gray-200"
-                }`}
-              >
+                }`}>
                 {option}
               </button>
             ))}
@@ -137,8 +141,7 @@ export const Onboarding: React.FC = () => {
                   }}
                   className={`w-full p-4 text-left border rounded-lg transition-all duration-200 hover:border-black ${
                     isSelected ? "border-black bg-gray-50" : "border-gray-200"
-                  }`}
-                >
+                  }`}>
                   <div className="flex items-center justify-between">
                     {option}
                     {isSelected && (
@@ -189,8 +192,7 @@ export const Onboarding: React.FC = () => {
               variant="outline"
               onClick={handleBack}
               disabled={currentStep === 0}
-              className="flex items-center"
-            >
+              className="flex items-center">
               <ChevronLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -199,8 +201,7 @@ export const Onboarding: React.FC = () => {
               onClick={handleNext}
               disabled={!isCurrentResponseValid()}
               loading={loading}
-              className="flex items-center"
-            >
+              className="flex items-center">
               {currentStep === onboardingQuestions.length - 1
                 ? "Complete"
                 : "Next"}

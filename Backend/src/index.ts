@@ -20,7 +20,7 @@ app.use("/api/webhooks", clerkWebhook);
 app.use(express.json());
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
-connectDB();
+// connectDB();
 // All Routes
 app.use("/api", planRouter);
 

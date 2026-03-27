@@ -12,6 +12,7 @@ import { User } from "../models/user.mode";
 import { Types } from "mongoose";
 import {
   getMonthKey,
+  getTokensUsedForMonth,
   incrementTokensUsedForMonth,
 } from "../services/tokenUsage.service";
 interface IQAndA {
@@ -54,6 +55,7 @@ export const generateNewPlan = async (
 ): Promise<void> => {
   try {
     const { qAnda }: { qAnda: IQAndA[] } = req.body;
+
     if (!qAnda) res.status(404).json({ message: "Question not provided" });
     const categories =
       qAnda.find((q) => q.question === "Where do you want to improve?")
@@ -61,6 +63,7 @@ export const generateNewPlan = async (
     const formattedUserData = JSON.stringify(qAnda, null, 2);
     const auth = getAuth(req);
 
+    const monthKey = getMonthKey(new Date());
     const user = await getUserWitlClerkId(auth.userId as string);
     if (!user) {
       res.status(401).json({
@@ -69,7 +72,23 @@ export const generateNewPlan = async (
       });
       return;
     }
+    const currentTokensUsed = await getTokensUsedForMonth(user._id, monthKey);
 
+    const isPro = user.planTier === "pro";
+    const isBlocked = !isPro && currentTokensUsed >= 3000;
+    if (isBlocked) {
+      res.status(402).json({
+        success: false,
+        error: "Free plan token limit reached. Upgrade for unlimited access.",
+        usage: {
+          monthKey,
+          tokensUsed: currentTokensUsed,
+          limit: 3000,
+          planTier: user.planTier,
+        },
+      });
+      return;
+    }
     const input = await prompt.format({
       userData: formattedUserData,
       categories,
@@ -79,7 +98,6 @@ export const generateNewPlan = async (
     const response = await llm.invoke(input);
     const parsedData = extractPlanJSON(response.text);
     const savedData = await storePlanInDBWithInsertMany(user._id, parsedData);
-    const monthKey = getMonthKey(new Date());
 
     const tokenUsage =
       (response as any)?.response_metadata?.usage?.total_tokens ?? 0;
